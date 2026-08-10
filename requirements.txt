@@ -1,0 +1,11 @@
+# GDC Video Repair nu are nicio dependinta externa de Python — foloseste
+# doar biblioteca standard (struct, subprocess, json, tkinter, argparse).
+#
+# Singura dependinta reala e FFmpeg, instalat separat la nivel de sistem
+# (nu prin pip) — vezi README.md, sectiunea Instalare.
+#
+# Pachetele de mai jos sunt necesare DOAR daca vrei sa rulezi
+# tests/run_tests.py cu comparatie completa pixel-cu-pixel (optional -
+# testele functioneaza structural si fara ele, doar sar peste acel pas):
+Pillow>=10.0.0
+numpy>=1.24.0
