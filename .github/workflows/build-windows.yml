@@ -17,6 +17,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine version
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v',''
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -31,19 +37,49 @@ jobs:
         run: |
           pyinstaller build/build-windows.spec --noconfirm
 
+      # Builds the unified, single-download release archive:
+      # GDCVideoRepair-windows.zip
+      # ├── GDCVideoRepair.exe
+      # ├── guides/*.pdf
+      # └── README.txt
+      - name: Package release archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release\windows\guides | Out-Null
+          Copy-Item dist\GDCVideoRepair.exe release\windows\
+          Copy-Item docs\guides\*.pdf release\windows\guides\
+          @"
+          GDC Video Repair v$env:VERSION -- Windows
+          =====================================
+
+          INSTALARE
+          1. Dezarhiveaza acest fisier ZIP
+          2. Dublu-click pe GDCVideoRepair.exe pentru a rula direct
+             (nu necesita instalare separata)
+          3. Aplicatia necesita FFmpeg instalat separat:
+             descarca de pe ffmpeg.org si adauga in PATH
+
+          GHIDURI
+          Gasesti ghidul complet de utilizare (instalare, cum functioneaza,
+          exemple, depanare) in folderul guides/, in romana, engleza si spaniola.
+
+          Cod sursa si documentatie: https://github.com/gordasgdc/gdc-video-repair
+          Licenta: MIT
+          "@ | Out-File -Encoding utf8 release\windows\README.txt
+          Compress-Archive -Path release\windows\* -DestinationPath "GDCVideoRepair-windows.zip" -Force
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: GDCVideoRepair-Windows
-          path: dist/GDCVideoRepair.exe
+          path: GDCVideoRepair-windows.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/GDCVideoRepair.exe
-            docs/guides/*.pdf
+            GDCVideoRepair-windows.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
