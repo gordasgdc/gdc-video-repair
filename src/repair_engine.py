@@ -24,6 +24,7 @@ import moov_parser
 import moov_builder
 import sample_scanner
 import ffmpeg_wrapper
+import audio_recovery
 
 
 @dataclass
@@ -98,6 +99,19 @@ def repair_with_reference(corrupt_path: str, reference_path: str, output_path: s
     if not ref_video_track.sample_table.codec_config_raw:
         return RepairResult(False, "failed", "Nu am putut extrage configuratia codec-ului (avcC/hvcC) din fisierul de referinta.")
 
+    ref_trak_boxes = ref_boxes[0].find_all("trak") if False else \
+        next(b for b in ref_boxes if b.box_type == "moov").find_all("trak")
+    ref_audio = None
+    for trak in ref_trak_boxes:
+        candidate = audio_recovery.parse_audio_track(reference_path, trak)
+        if candidate is not None:
+            ref_audio = candidate
+            break
+
+    audio_note = "Fisierul de referinta nu are track audio."
+    if ref_audio:
+        verdict = audio_recovery.classify_audio_recoverability(ref_audio)
+        audio_note = verdict.reason    
     is_hevc = ref_video_track.sample_table.codec_fourcc in ("hvc1", "hev1")
 
     mdat_payload_start, mdat_payload_size = _find_mdat_or_treat_whole_as_mdat(corrupt_path)
@@ -135,7 +149,8 @@ def repair_with_reference(corrupt_path: str, reference_path: str, output_path: s
     ok, msg = ffmpeg_wrapper.validate_output(output_path)
     if ok:
         return RepairResult(True, "reference_rebuild",
-                             f"Reparat cu succes folosind fisierul de referinta ({len(scanned)} cadre reconstruite). {msg}",
+                              f"Reparat cu succes folosind fisierul de referinta ({len(scanned)} cadre reconstruite). "
+                             f"{msg} | Audio: {audio_note}",
                              output_path)
     return RepairResult(False, "reference_rebuild",
                          f"Fisierul a fost reconstruit dar validarea a esuat: {msg}. "
