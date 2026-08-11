@@ -175,8 +175,8 @@ def classify_audio_recoverability(ref_audio: dict, variance_threshold: float = 0
     if len(sizes) < 8:
         return AudioRecoverability(False, "Prea putine esantioane in referinta ca sa evaluam variatia bitrate-ului.")
 
-    avg = sum(sizes) / len(sizes)
-    variance = sum(abs(s - avg) for s in sizes) / len(sizes) / avg if avg else 1.0
+    avg = sum(sizes[:-1]) / len(sizes[:-1]) if len(sizes) > 1 else sizes[0]
+    variance = sum(abs(s - avg) for s in sizes[:-1]) / len(sizes[:-1]) / avg if avg else 1.0
 
     if variance <= variance_threshold:
         return AudioRecoverability(
