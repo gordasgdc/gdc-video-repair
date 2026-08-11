@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GDC Video Repair</title>
+<meta name="description" content="Aplicație gratuită pentru repararea fișierelor video MP4/MOV corupte, folosind tehnica fișierului de referință.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg:#101218; --bg-elevated:#171A22; --panel:#1B1F29; --panel-2:#21252F;
+    --border:#2A2F3B; --text:#ECEEF1; --text-muted:#9199A8; --text-faint:#626A79;
+    --tally:#E8483C; --tally-dim:#4A2622; --scope:#35D6BE; --scope-dim:#143A35;
+    --amber:#E8A33D; --violet:#8B7CF6;
+    --font-display:'Space Grotesk', sans-serif; --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body);
+    background-image:
+      radial-gradient(circle at 10% -10%, rgba(53,214,190,0.08), transparent 40%),
+      radial-gradient(circle at 100% 0%, rgba(232,72,60,0.07), transparent 35%);
+    background-attachment:fixed;
+    line-height:1.6;
+  }
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:-0.01em; margin:0;}
+  a{color:inherit;}
+  img{max-width:100%;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  header{
+    position:sticky; top:0; z-index:10;
+    background:rgba(16,18,24,0.82); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 0;}
+  .brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:600;}
+  .brand-mark{
+    width:28px; height:28px; border-radius:7px;
+    background:linear-gradient(135deg, var(--tally), var(--scope));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#0d0f14; font-size:13px;
+  }
+  .lang-switch{display:flex; gap:4px;}
+  .lang-btn{
+    background:none; border:1px solid var(--border); color:var(--text-faint);
+    border-radius:6px; padding:5px 10px; font-size:11px; font-family:var(--font-mono); cursor:pointer;
+  }
+  .lang-btn.active{border-color:var(--scope); color:var(--scope);}
+
+  .hero{padding:90px 0 50px; text-align:center;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:12px;
+    color:var(--scope); border:1px solid var(--scope-dim); background:var(--scope-dim);
+    padding:6px 14px; border-radius:100px; margin-bottom:22px;
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--tally);}
+  .hero h1{font-size:clamp(32px,5vw,52px); line-height:1.1; max-width:820px; margin:0 auto;}
+  .hero h1 .accent{background:linear-gradient(90deg, var(--tally), var(--amber), var(--scope)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hero p{color:var(--text-muted); font-size:16px; max-width:580px; margin:20px auto 0; line-height:1.6;}
+
+  .cta-row{display:flex; gap:12px; justify-content:center; margin-top:32px; flex-wrap:wrap;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:12px 22px; border-radius:9px; font-weight:600; font-size:14px;
+    text-decoration:none; border:1px solid var(--border); transition:transform .1s ease, border-color .1s ease;
+    cursor:pointer;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--scope); border-color:var(--scope); color:#0A1613;}
+  .btn-secondary{background:var(--panel-2); color:var(--text);}
+  .btn-secondary:hover{border-color:#3A4150;}
+
+  /* diagrama semnatura: moov lipsa -> reconstruit */
+  .repair-diagram{
+    max-width:640px; margin:56px auto 0; display:flex; align-items:center; justify-content:center; gap:14px;
+    font-family:var(--font-mono); font-size:12px; color:var(--text-faint); flex-wrap:wrap;
+  }
+  .repair-diagram .box{
+    border:1px dashed var(--border); border-radius:8px; padding:10px 16px; background:var(--panel);
+  }
+  .repair-diagram .box.broken{border-color:var(--tally-dim); color:var(--tally); background:rgba(232,72,60,0.08);}
+  .repair-diagram .box.fixed{border-style:solid; border-color:var(--scope-dim); color:var(--scope); background:var(--scope-dim);}
+  .repair-diagram .arrow{color:var(--text-faint);}
+
+  section{padding:60px 0;}
+  .section-title{text-align:center; margin-bottom:38px;}
+  .section-title h2{font-size:26px;}
+  .section-title p{color:var(--text-muted); margin-top:8px; font-size:14px;}
+
+  .about-text{max-width:700px; margin:0 auto; text-align:center; color:var(--text-muted); font-size:15px;}
+
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .feature{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:22px;
+    opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease;
+  }
+  .feature.in-view{opacity:1; transform:none;}
+  .feature .icon{font-size:22px; margin-bottom:12px;}
+  .feature h3{font-size:15px; margin-bottom:8px;}
+  .feature p{color:var(--text-muted); font-size:13px; line-height:1.55; margin:0;}
+
+  .steps{max-width:700px; margin:0 auto; display:flex; flex-direction:column; gap:12px;}
+  .step{
+    display:flex; align-items:flex-start; gap:14px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:15px 18px;
+    opacity:0; transform:translateX(-10px); transition:opacity .5s ease, transform .5s ease;
+  }
+  .step.in-view{opacity:1; transform:none;}
+  .step .num{
+    flex:none; width:28px; height:28px; border-radius:50%;
+    background:var(--scope); color:#0A1613; font-weight:700; font-size:12.5px;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-mono);
+  }
+  .step .txt strong{display:block; margin-bottom:2px; font-size:14px;}
+  .step .txt span{color:var(--text-muted); font-size:13px;}
+
+  .roadmap{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px;}
+  .roadmap-item{
+    background:var(--bg-elevated); border:1px dashed var(--border); border-radius:10px; padding:16px 18px; font-size:13px; color:var(--text-muted);
+  }
+  .roadmap-item strong{color:var(--text); display:block; margin-bottom:4px; font-size:14px;}
+  .roadmap-item.done{border-style:solid; border-color:var(--scope-dim); background:var(--scope-dim);}
+  .roadmap-item.done strong{color:var(--scope);}
+
+  .platforms{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .platform-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:26px;
+    display:flex; flex-direction:column; gap:14px; text-align:center;
+  }
+  .platform-card .plat-icon{font-size:28px;}
+  .platform-card .plat-name{font-family:var(--font-display); font-size:17px; font-weight:600;}
+  .platform-card .plat-file{font-family:var(--font-mono); font-size:12px; color:var(--text-faint);}
+
+  footer{border-top:1px solid var(--border); padding:34px 0; text-align:center; color:var(--text-faint); font-size:12.5px;}
+  footer a{color:var(--scope); text-decoration:none;}
+
+  @media(max-width:760px){
+    .grid{grid-template-columns:1fr;}
+    .platforms{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand"><div class="brand-mark">G</div> GDC Video Repair</div>
+    <div class="lang-switch">
+      <button class="lang-btn" data-lang="ro">RO</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="es">ES</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <div class="eyebrow"><span class="dot"></span> <span data-t="eyebrow"></span></div>
+  <h1 data-t="hero_title"></h1>
+  <p data-t="hero_sub"></p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/gordasgdc/gdc-video-repair/releases/latest" data-t="cta_download"></a>
+    <a class="btn btn-secondary" href="https://github.com/gordasgdc/gdc-video-repair" data-t="cta_source"></a>
+  </div>
+  <div class="repair-diagram">
+    <div class="box broken" data-t="diagram_broken">ftyp + mdat (moov lipsă)</div>
+    <div class="arrow">+</div>
+    <div class="box" data-t="diagram_ref">fișier de referință</div>
+    <div class="arrow">→</div>
+    <div class="box fixed" data-t="diagram_fixed">ftyp + moov nou + mdat</div>
+  </div>
+</section>
+
+<section class="wrap" id="about">
+  <div class="section-title">
+    <h2 data-t="about_title"></h2>
+  </div>
+  <p class="about-text" data-t="about_text"></p>
+</section>
+
+<section class="wrap" id="features">
+  <div class="section-title">
+    <h2 data-t="features_title"></h2>
+    <p data-t="features_sub"></p>
+  </div>
+  <div class="grid" id="features-grid"></div>
+</section>
+
+<section class="wrap" id="how">
+  <div class="section-title">
+    <h2 data-t="how_title"></h2>
+  </div>
+  <div class="steps" id="steps-list"></div>
+</section>
+
+<section class="wrap" id="roadmap">
+  <div class="section-title">
+    <h2 data-t="roadmap_title"></h2>
+    <p data-t="roadmap_sub"></p>
+  </div>
+  <div class="roadmap" id="roadmap-grid"></div>
+</section>
+
+<section class="wrap" id="download">
+  <div class="section-title">
+    <h2 data-t="download_title"></h2>
+    <p data-t="download_sub"></p>
+  </div>
+  <div class="platforms">
+    <div class="platform-card">
+      <div class="plat-icon">🍎</div>
+      <div class="plat-name">macOS</div>
+      <div class="plat-file">GDCVideoRepair.pkg</div>
+      <p data-t="mac_hint" style="color:var(--text-muted); font-size:13px; margin:0;"></p>
+      <a class="btn btn-secondary" href="https://github.com/gordasgdc/gdc-video-repair/releases/latest" data-t="cta_download"></a>
+    </div>
+    <div class="platform-card">
+      <div class="plat-icon">🪟</div>
+      <div class="plat-name">Windows</div>
+      <div class="plat-file">GDCVideoRepair.exe</div>
+      <p data-t="win_hint" style="color:var(--text-muted); font-size:13px; margin:0;"></p>
+      <a class="btn btn-secondary" href="https://github.com/gordasgdc/gdc-video-repair/releases/latest" data-t="cta_download"></a>
+    </div>
+  </div>
+  <p style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:22px;" data-t="ffmpeg_note"></p>
+  <p style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:8px;" data-t="guide_note"></p>
+</section>
+
+<section class="wrap" id="troubleshooting">
+  <div class="section-title">
+    <h2 data-t="tsh_title"></h2>
+    <p data-t="tsh_sub"></p>
+  </div>
+  <div class="grid" id="troubleshooting-grid"></div>
+</section>
+
+<section class="wrap" id="license">
+  <div class="section-title">
+    <h2 data-t="license_title"></h2>
+  </div>
+  <p style="max-width:70ch; color:var(--text-muted); font-size:14px; margin:0 auto;" data-t="license_text"></p>
+</section>
+
+<footer class="wrap">
+  <div data-t="footer_line"></div>
+  <div style="margin-top:8px;">
+    <a href="https://github.com/gordasgdc">GitHub</a> ·
+    <a href="https://web.facebook.com/cristiGDC">Facebook</a> ·
+    <a href="https://www.youtube.com/@cristigordas">YouTube</a>
+  </div>
+</footer>
+
+<script>
+const T = {
+  ro: {
+    eyebrow: "Recuperare locală, fără upload nicăieri",
+    hero_title: 'Repară fișiere video corupte <span class="accent">cu fișierul de referință</span>',
+    hero_sub: "Aplicație desktop gratuită pentru recuperarea fișierelor MP4/MOV corupte — cardul scos în timpul filmării, transfer întrerupt. Prelucrare 100% locală, fișierele tale nu pleacă nicăieri.",
+    cta_download: "Descarcă ultima versiune",
+    cta_source: "Cod sursă (GitHub)",
+    diagram_broken: "ftyp + mdat (moov lipsă)",
+    diagram_ref: "fișier de referință",
+    diagram_fixed: "ftyp + moov nou + mdat",
+    about_title: "Despre aplicație",
+    about_text: "Un fișier MP4/MOV are două părți: mdat (cadrele video brute) și moov (harta pentru player). Camera scrie moov abia la finalul filmării — dacă scoți cardul în timpul filmării, moov lipsește, iar fișierul devine ilizibil, deși datele video sunt de multe ori intacte. GDC Video Repair reconstruiește moov-ul folosind un fișier sănătos de referință, filmat cu aceeași cameră și aceleași setări.",
+    features_title: "Caracteristici",
+    features_sub: "Aceeași tehnică folosită de instrumente cunoscute precum Untrunc.",
+    how_title: "Cum funcționează",
+    roadmap_title: "Ce urmează",
+    roadmap_sub: "Ce e deja disponibil și ce urmează.",
+    download_title: "Descarcă și instalează",
+    download_sub: "Alege pachetul pentru sistemul tău din ultima versiune de pe GitHub.",
+    mac_hint: "Dublu-click pe .pkg și urmează instalatorul.",
+    win_hint: "Dublu-click pe .exe pentru a rula aplicația.",
+    ffmpeg_note: "Necesită FFmpeg instalat separat pe sistem (brew install ffmpeg pe Mac; descarcă de pe ffmpeg.org pe Windows).",
+    footer_line: "GDC Video Repair · gratuit și open-source (MIT) · realizat de Cristi Gordas",
+    guide_note: "Fiecare release include și un ghid PDF complet, în română, engleză și spaniolă — disponibil în arhivă și în docs/guides din repository.",
+    tsh_title: "Probleme frecvente",
+    tsh_sub: "Cele mai comune întrebări, cu răspuns direct.",
+    license_title: "Licență",
+    license_text: "GDC Video Repair e licențiat MIT — gratuit, open-source, codul sursă complet disponibil pe GitHub. Aplicația folosește FFmpeg (instalat separat, nu inclus) ca unealtă externă, prin subprocess — nu leagă direct librăriile FFmpeg.",
+    troubleshooting: [
+      ["🔍","\"Nu am reușit să identific eșantioane video valide\"","Fișierul e probabil corupt și la nivelul datelor brute, nu doar în header. Verifică dacă mai are câțiva KB de date recognoscibile."],
+      ["📹","\"Fișierul de referință nu are un track video valid\"","Asigură-te că fișierul de referință chiar se redă normal înainte să-l folosești."],
+      ["🎨","Fișierul reparat se redă, dar imaginea e stricată","Codec-ul sau configurația din referință nu se potrivesc exact — încearcă alt fișier, filmat cu setări cât mai apropiate."],
+      ["⏳","Remuxarea rapidă durează mult","Pentru fișiere 4K/6K mari, remuxarea inițială poate dura — las-o să termine."],
+    ],
+    features: [
+      ["🩹","Remuxare rapidă","Primul pas, fără fișier de referință — rezolvă cazurile ușoare direct."],
+      ["🔬","Reconstrucție din referință","Scanează byte cu byte datele brute și reconstruiește un moov nou, valid."],
+      ["✂️","Recuperare parțială","Fișier trunchiat la mijlocul filmării? Recuperează tot ce se poate, până la punctul exact al corupției."],
+      ["🎞️","H.264 și H.265","Suport complet pentru ambele codec-uri video, cele mai comune la camere moderne."],
+      ["🖥️","GUI sau linie de comandă","Interfață grafică simplă, sau CLI pentru workflow-uri automatizate."],
+      ["🔒","100% local","Fișierele tale nu pleacă nicăieri — totul se procesează pe calculatorul tău."],
+    ],
+    steps: [
+      ["📦","Descarcă aplicația de pe GitHub Releases"],
+      ["🖥️","Instalează (.pkg pe Mac, .exe pe Windows) — necesită FFmpeg instalat separat"],
+      ["📂","Alege fișierul corupt și, dacă ai, un fișier de referință sănătos"],
+      ["🔧","Apasă Repară și așteaptă"],
+      ["✅","Fișierul reparat e gata, salvat unde ai ales"],
+    ],
+    roadmap: [
+      ["🩹 Remuxare rapidă", "deja disponibil", true],
+      ["🔬 Reconstrucție din referință (H.264/H.265)", "deja disponibil", true],
+      ["✂️ Recuperare parțială la trunchiere", "deja disponibil", true],
+      ["🔊 Reconstrucție track audio", "în lucru", false],
+      ["🎬 Suport codec-uri video suplimentare", "în lucru", false],
+    ],
+  },
+  en: {
+    eyebrow: "Local recovery, nothing uploaded anywhere",
+    hero_title: 'Repair corrupted video files <span class="accent">using a reference file</span>',
+    hero_sub: "Free desktop app for recovering corrupted MP4/MOV files — card pulled mid-recording, interrupted transfer. 100% local processing, your files never leave your computer.",
+    cta_download: "Download latest version",
+    cta_source: "Source code (GitHub)",
+    diagram_broken: "ftyp + mdat (moov missing)",
+    diagram_ref: "reference file",
+    diagram_fixed: "ftyp + new moov + mdat",
+    about_title: "About the app",
+    about_text: "An MP4/MOV file has two parts: mdat (the raw video frames) and moov (the map for the player). The camera only writes moov at the very end of recording — if you pull the card mid-recording, moov is missing, and the file becomes unreadable, even though the video data is often intact. GDC Video Repair rebuilds moov using a healthy reference file, shot with the same camera and settings.",
+    features_title: "Features",
+    features_sub: "The same technique used by well-known tools like Untrunc.",
+    how_title: "How it works",
+    roadmap_title: "What's next",
+    roadmap_sub: "What's already available and what's coming.",
+    download_title: "Download & install",
+    download_sub: "Pick the package for your system from the latest GitHub release.",
+    mac_hint: "Double-click the .pkg and follow the installer.",
+    win_hint: "Double-click the .exe to run the app.",
+    ffmpeg_note: "Requires FFmpeg installed separately on the system (brew install ffmpeg on Mac; download from ffmpeg.org on Windows).",
+    footer_line: "GDC Video Repair · free & open-source (MIT) · built by Cristi Gordas",
+    guide_note: "Every release also includes a complete PDF guide, in Romanian, English, and Spanish — available in the archive and in docs/guides in the repository.",
+    tsh_title: "Common issues",
+    tsh_sub: "The most common questions, answered directly.",
+    license_title: "License",
+    license_text: "GDC Video Repair is MIT licensed — free, open-source, full source code available on GitHub. The app uses FFmpeg (installed separately, not bundled) as an external tool via subprocess — it doesn't link directly against FFmpeg's libraries.",
+    troubleshooting: [
+      ["🔍","\"Couldn't identify valid video samples\"","The file is likely corrupted at the raw data level too, not just the header. Check if it still has a few KB of recognizable data."],
+      ["📹","\"Reference file doesn't have a valid video track\"","Make sure the reference file actually plays normally before using it."],
+      ["🎨","Repaired file plays but the image is broken","The codec or configuration in the reference doesn't exactly match — try a different file, shot with settings as close as possible."],
+      ["⏳","Quick remux takes a long time","For large 4K/6K files, the initial remux can take a while — let it finish."],
+    ],
+    features: [
+      ["🩹","Quick remux","First step, no reference file needed — resolves easy cases directly."],
+      ["🔬","Reference-based reconstruction","Scans raw data byte by byte and rebuilds a new, valid moov."],
+      ["✂️","Partial recovery","File truncated mid-recording? Recovers everything possible, up to the exact point of corruption."],
+      ["🎞️","H.264 and H.265","Full support for both video codecs, the most common on modern cameras."],
+      ["🖥️","GUI or command line","Simple graphical interface, or CLI for automated workflows."],
+      ["🔒","100% local","Your files never leave anywhere — everything is processed on your computer."],
+    ],
+    steps: [
+      ["📦","Download the app from GitHub Releases"],
+      ["🖥️","Install (.pkg on Mac, .exe on Windows) — requires FFmpeg installed separately"],
+      ["📂","Choose the corrupt file and, if you have one, a healthy reference file"],
+      ["🔧","Click Repair and wait"],
+      ["✅","The repaired file is ready, saved where you chose"],
+    ],
+    roadmap: [
+      ["🩹 Quick remux", "already available", true],
+      ["🔬 Reference-based reconstruction (H.264/H.265)", "already available", true],
+      ["✂️ Partial recovery on truncation", "already available", true],
+      ["🔊 Audio track reconstruction", "in progress", false],
+      ["🎬 Additional video codec support", "in progress", false],
+    ],
+  },
+  es: {
+    eyebrow: "Recuperación local, nada se sube a ningún sitio",
+    hero_title: 'Repara archivos de vídeo corruptos <span class="accent">con un archivo de referencia</span>',
+    hero_sub: "App de escritorio gratuita para recuperar archivos MP4/MOV corruptos — tarjeta sacada a mitad de grabación, transferencia interrumpida. Procesamiento 100% local, tus archivos nunca salen de tu ordenador.",
+    cta_download: "Descargar última versión",
+    cta_source: "Código fuente (GitHub)",
+    diagram_broken: "ftyp + mdat (falta moov)",
+    diagram_ref: "archivo de referencia",
+    diagram_fixed: "ftyp + moov nuevo + mdat",
+    about_title: "Sobre la aplicación",
+    about_text: "Un archivo MP4/MOV tiene dos partes: mdat (los fotogramas de vídeo brutos) y moov (el mapa para el reproductor). La cámara solo escribe moov al final de la grabación — si sacas la tarjeta a mitad de grabación, moov falta, y el archivo se vuelve ilegible, aunque los datos de vídeo suelen estar intactos. GDC Video Repair reconstruye moov usando un archivo de referencia sano, filmado con la misma cámara y ajustes.",
+    features_title: "Características",
+    features_sub: "La misma técnica que usan herramientas conocidas como Untrunc.",
+    how_title: "Cómo funciona",
+    roadmap_title: "Qué sigue",
+    roadmap_sub: "Qué está ya disponible y qué viene.",
+    download_title: "Descargar e instalar",
+    download_sub: "Elige el paquete para tu sistema desde la última versión de GitHub.",
+    mac_hint: "Haz doble clic en el .pkg y sigue el instalador.",
+    win_hint: "Haz doble clic en el .exe para ejecutar la app.",
+    ffmpeg_note: "Requiere FFmpeg instalado por separado en el sistema (brew install ffmpeg en Mac; descárgalo de ffmpeg.org en Windows).",
+    footer_line: "GDC Video Repair · gratis y de código abierto (MIT) · creado por Cristi Gordas",
+    guide_note: "Cada versión incluye también una guía completa en PDF, en rumano, inglés y español — disponible en el archivo y en docs/guides del repositorio.",
+    tsh_title: "Problemas frecuentes",
+    tsh_sub: "Las preguntas más comunes, con respuesta directa.",
+    license_title: "Licencia",
+    license_text: "GDC Video Repair está licenciado bajo MIT — gratuito, de código abierto, código fuente completo disponible en GitHub. La aplicación usa FFmpeg (instalado por separado, no incluido) como herramienta externa vía subprocess — no enlaza directamente con las librerías de FFmpeg.",
+    troubleshooting: [
+      ["🔍","\"No se pudieron identificar muestras de vídeo válidas\"","El archivo probablemente está dañado también a nivel de datos brutos, no solo en el header. Comprueba si aún tiene unos KB de datos reconocibles."],
+      ["📹","\"El archivo de referencia no tiene una pista de vídeo válida\"","Asegúrate de que el archivo de referencia realmente se reproduce con normalidad antes de usarlo."],
+      ["🎨","El archivo reparado se reproduce pero la imagen está dañada","El códec o la configuración de la referencia no coinciden exactamente — prueba con otro archivo, filmado con ajustes lo más parecidos posible."],
+      ["⏳","La remultiplexación rápida tarda mucho","Para archivos 4K/6K grandes, la remultiplexación inicial puede tardar — déjala terminar."],
+    ],
+    features: [
+      ["🩹","Remultiplexación rápida","Primer paso, sin archivo de referencia — resuelve casos sencillos directamente."],
+      ["🔬","Reconstrucción a partir de referencia","Escanea los datos brutos byte a byte y reconstruye un moov nuevo y válido."],
+      ["✂️","Recuperación parcial","¿Archivo truncado a mitad de grabación? Recupera todo lo posible, hasta el punto exacto de la corrupción."],
+      ["🎞️","H.264 y H.265","Soporte completo para ambos códecs de vídeo, los más comunes en cámaras modernas."],
+      ["🖥️","GUI o línea de comandos","Interfaz gráfica simple, o CLI para flujos de trabajo automatizados."],
+      ["🔒","100% local","Tus archivos no salen a ningún sitio — todo se procesa en tu ordenador."],
+    ],
+    steps: [
+      ["📦","Descarga la app desde GitHub Releases"],
+      ["🖥️","Instálala (.pkg en Mac, .exe en Windows) — requiere FFmpeg instalado por separado"],
+      ["📂","Elige el archivo corrupto y, si tienes uno, un archivo de referencia sano"],
+      ["🔧","Pulsa Reparar y espera"],
+      ["✅","El archivo reparado está listo, guardado donde elegiste"],
+    ],
+    roadmap: [
+      ["🩹 Remultiplexación rápida", "ya disponible", true],
+      ["🔬 Reconstrucción a partir de referencia (H.264/H.265)", "ya disponible", true],
+      ["✂️ Recuperación parcial en truncamiento", "ya disponible", true],
+      ["🔊 Reconstrucción de pista de audio", "en desarrollo", false],
+      ["🎬 Soporte para códecs de vídeo adicionales", "en desarrollo", false],
+    ],
+  },
+};
+
+let lang = localStorage.getItem("gdc_docs_lang") || "ro";
+let revealObserver = null;
+
+function observeRevealTargets() {
+  if (!("IntersectionObserver" in window)) {
+    document.querySelectorAll(".feature, .step").forEach(el => el.classList.add("in-view"));
+    return;
+  }
+  if (revealObserver) revealObserver.disconnect();
+  revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add("in-view"); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".feature, .step").forEach(el => revealObserver.observe(el));
+}
+
+function render() {
+  const d = T[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el => {
+    const key = el.getAttribute("data-t");
+    if (d[key] !== undefined) el.innerHTML = d[key];
+  });
+  document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+
+  document.getElementById("features-grid").innerHTML = d.features.map(f => `
+    <div class="feature"><div class="icon">${f[0]}</div><h3>${f[1]}</h3><p>${f[2]}</p></div>
+  `).join("");
+
+  document.getElementById("steps-list").innerHTML = d.steps.map((s, i) => `
+    <div class="step"><div class="num">${i + 1}</div><div class="txt"><strong>${s[0]} ${s[1]}</strong></div></div>
+  `).join("");
+
+  document.getElementById("roadmap-grid").innerHTML = d.roadmap.map(r => `
+    <div class="roadmap-item ${r[2] ? "done" : ""}"><strong>${r[0]}</strong>${r[1]}</div>
+  `).join("");
+
+  document.getElementById("troubleshooting-grid").innerHTML = d.troubleshooting.map(t => `
+    <div class="feature"><div class="icon">${t[0]}</div><h3>${t[1]}</h3><p>${t[2]}</p></div>
+  `).join("");
+
+  observeRevealTargets();
+}
+
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    lang = btn.dataset.lang;
+    localStorage.setItem("gdc_docs_lang", lang);
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
